@@ -1,0 +1,28 @@
+{
+  "name": "animeav1-stremio-addon",
+  "version": "1.0.0",
+  "description": "Stremio addon for AnimeAV1 (animeav1.com)",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node test-scraper.js"
+  },
+  "keywords": [
+    "stremio",
+    "stremio-addon",
+    "animeav1",
+    "anime",
+    "spanish"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "stremio-addon-sdk": "^1.6.0"
+  }
+}
