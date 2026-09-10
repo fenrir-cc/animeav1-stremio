@@ -31,6 +31,9 @@ builder.defineMetaHandler(async (args) => {
     }
     const slug = args.id.replace('animeav1:', '');
     const meta = await getAnimeMeta(slug);
+    if (meta) {
+        meta.type = args.type || 'series';
+    }
     return { meta };
 });
 

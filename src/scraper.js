@@ -32,7 +32,7 @@ export async function getLatestEpisodes() {
 
                 results.push({
                     id: `animeav1:${slug}`,
-                    type: 'anime',
+                    type: 'series',
                     name: `${title} - Ep ${epNum}`,
                     poster: img || `${BASE_URL}/img/logo.svg`,
                     description: `Último episodio agregado: Episodio ${epNum}`,
@@ -71,7 +71,7 @@ export async function searchCatalog(query = '') {
                 const slug = href.replace('/media/', '').split('/')[0];
                 items.push({
                     id: `animeav1:${slug}`,
-                    type: 'anime',
+                    type: 'series',
                     name: title,
                     poster: poster || `${BASE_URL}/img/logo.svg`,
                     description: category ? `Tipo: ${category}` : 'Anime',
@@ -152,7 +152,7 @@ export async function getAnimeMeta(slug) {
 
         return {
             id: `animeav1:${slug}`,
-            type: 'anime',
+            type: 'series',
             name: title,
             poster: poster,
             background: backdrop || poster,
