@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
 import crypto from 'crypto';
+import { Transform } from 'stream';
 import addonSdk from 'stremio-addon-sdk';
 const { getRouter } = addonSdk;
 
@@ -63,6 +64,25 @@ function computeMegaIv(initialIvBuf, startByte) {
         carry = Math.floor(sum / 256) + Math.floor(carry / 256);
     }
     return newIv;
+}
+
+class SkipTransform extends Transform {
+    constructor(skip) {
+        super();
+        this.skip = skip;
+    }
+    _transform(chunk, encoding, callback) {
+        if (this.skip > 0) {
+            if (chunk.length <= this.skip) {
+                this.skip -= chunk.length;
+                return callback();
+            }
+            chunk = chunk.subarray(this.skip);
+            this.skip = 0;
+        }
+        this.push(chunk);
+        callback();
+    }
 }
 
 /**
@@ -133,26 +153,7 @@ app.get('/proxy', async (req, res) => {
                 }
             }
 
-            let skipBytes = blockOffset;
-            const decryptedStream = cdnResponse.data.pipe(decipher);
-
-            if (skipBytes > 0) {
-                decryptedStream.on('data', function handleFirstChunk(chunk) {
-                    if (skipBytes > 0) {
-                        if (chunk.length <= skipBytes) {
-                            skipBytes -= chunk.length;
-                        } else {
-                            const sliced = chunk.subarray(skipBytes);
-                            skipBytes = 0;
-                            decryptedStream.removeListener('data', handleFirstChunk);
-                            res.write(sliced);
-                            decryptedStream.pipe(res);
-                        }
-                    }
-                });
-            } else {
-                decryptedStream.pipe(res);
-            }
+            cdnResponse.data.pipe(decipher).pipe(new SkipTransform(blockOffset)).pipe(res);
             return;
         }
 
@@ -235,6 +236,11 @@ app.get('/proxy', async (req, res) => {
                 res.setHeader(h, response.headers[h]);
             }
         });
+
+        // Ensure Android ExoPlayer receives video/mp2t Content-Type for HLS segments instead of text/html
+        if (targetUrl.includes('/segs/') || lowerTarget.endsWith('.html') || lowerTarget.endsWith('.ts')) {
+            res.setHeader('Content-Type', 'video/mp2t');
+        }
 
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Headers', '*');
