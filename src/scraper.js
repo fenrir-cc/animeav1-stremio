@@ -23,12 +23,16 @@ export async function getLatestEpisodes() {
             const $item = $(element);
             const title = $item.find('header div').first().text().trim();
             const href = $item.find('a[href^="/media/"]').attr('href');
-            const img = $item.find('img').attr('src');
+            let img = $item.find('img').attr('src');
 
             if (href && title) {
                 const parts = href.replace('/media/', '').split('/');
-                const slug = parts[0];
-                const epNum = parts[1] || '1';
+                const slug = parts[0].split('?')[0];
+                const epNum = parts[1] ? parts[1].split('?')[0] : '1';
+
+                if (img && img.startsWith('/')) {
+                    img = `${BASE_URL}${img}`;
+                }
 
                 results.push({
                     id: `animeav1:${slug}`,
@@ -64,11 +68,14 @@ export async function searchCatalog(query = '') {
             const $item = $(element);
             const title = $item.find('h3').text().trim();
             const href = $item.find('a[href^="/media/"]').attr('href');
-            const poster = $item.find('figure img').attr('src');
+            let poster = $item.find('figure img').attr('src') || $item.find('img').attr('src');
             const category = $item.find('.rounded.bg-line').text().trim();
 
             if (href && title) {
-                const slug = href.replace('/media/', '').split('/')[0];
+                const slug = href.replace('/media/', '').split('/')[0].split('?')[0];
+                if (poster && poster.startsWith('/')) {
+                    poster = `${BASE_URL}${poster}`;
+                }
                 items.push({
                     id: `animeav1:${slug}`,
                     type: 'series',
@@ -91,19 +98,53 @@ export async function searchCatalog(query = '') {
  */
 export async function getAnimeMeta(slug) {
     try {
-        const url = `${BASE_URL}/media/${slug}`;
+        const cleanSlug = slug.split(':')[0].split('/')[0].split('?')[0];
+        const url = `${BASE_URL}/media/${cleanSlug}`;
         const response = await axios.get(url, { headers: DEFAULT_HEADERS, timeout: 10000 });
         const html = response.data;
         const $ = cheerio.load(html);
 
-        const title = $('h1').first().text().trim() || slug.replace(/-/g, ' ');
+        const title = $('h1').first().text().trim() || cleanSlug.replace(/-/g, ' ');
         const synopsis = $('.entry p').first().text().trim() || 'Sin descripción disponible.';
-        const backdrop = $('figure img').attr('src') || '';
-        const poster = `https://cdn.animeav1.com/covers/${slug}.jpg`;
+
+        // Extract real poster image from covers CDN or img tags
+        let poster = '';
+        $('img').each((_, el) => {
+            const src = $(el).attr('src');
+            if (src && (src.includes('/covers/') || src.includes('cdn.animeav1.com/covers/')) && !poster) {
+                poster = src;
+            }
+        });
+        if (!poster) {
+            const firstImg = $('article img, figure img, main img').first().attr('src');
+            if (firstImg) poster = firstImg;
+        }
+        if (poster && poster.startsWith('/')) {
+            poster = `${BASE_URL}${poster}`;
+        }
+        if (!poster) {
+            poster = `${BASE_URL}/img/logo.svg`;
+        }
+
+        // Extract real backdrop image from backdrops CDN or default to poster
+        let backdrop = '';
+        $('img').each((_, el) => {
+            const src = $(el).attr('src');
+            if (src && (src.includes('/backdrops/') || src.includes('cdn.animeav1.com/backdrops/')) && !backdrop) {
+                backdrop = src;
+            }
+        });
+        if (backdrop && backdrop.startsWith('/')) {
+            backdrop = `${BASE_URL}${backdrop}`;
+        }
+        if (!backdrop) {
+            backdrop = poster;
+        }
 
         const genres = [];
         $('a[href*="genre="]').each((_, el) => {
-            genres.push($(el).text().trim());
+            const g = $(el).text().trim();
+            if (g && !genres.includes(g)) genres.push(g);
         });
 
         const epCountMatch = html.match(/episodesCount\s*[:=]\s*(\d+)/i);
@@ -113,7 +154,7 @@ export async function getAnimeMeta(slug) {
             const totalEp = parseInt(epCountMatch[1], 10);
             for (let i = 1; i <= totalEp; i++) {
                 videos.push({
-                    id: `animeav1:${slug}:${i}`,
+                    id: `animeav1:${cleanSlug}:${i}`,
                     title: `Episodio ${i}`,
                     season: 1,
                     episode: i,
@@ -121,14 +162,15 @@ export async function getAnimeMeta(slug) {
                 });
             }
         } else {
-            $('#episodes-list a').each((_, el) => {
+            $('#episodes-list a, a[href*="/media/"]').each((_, el) => {
                 const epHref = $(el).attr('href');
-                const epNumText = $(el).find('span').text().trim();
-                if (epHref) {
-                    const epNum = parseInt(epNumText || epHref.split('/').pop(), 10);
-                    if (!isNaN(epNum)) {
+                if (epHref && epHref.includes(`/${cleanSlug}/`)) {
+                    const epNumText = $(el).find('span').text().trim();
+                    const epNumStr = epHref.split('/').pop();
+                    const epNum = parseInt(epNumText || epNumStr, 10);
+                    if (!isNaN(epNum) && !videos.some(v => v.episode === epNum)) {
                         videos.push({
-                            id: `animeav1:${slug}:${epNum}`,
+                            id: `animeav1:${cleanSlug}:${epNum}`,
                             title: `Episodio ${epNum}`,
                             season: 1,
                             episode: epNum,
@@ -143,19 +185,20 @@ export async function getAnimeMeta(slug) {
 
         if (videos.length === 0) {
             videos.push({
-                id: `animeav1:${slug}:1`,
+                id: `animeav1:${cleanSlug}:1`,
                 title: 'Episodio 1',
                 season: 1,
                 episode: 1,
+                released: new Date().toISOString()
             });
         }
 
         return {
-            id: `animeav1:${slug}`,
+            id: `animeav1:${cleanSlug}`,
             type: 'series',
             name: title,
             poster: poster,
-            background: backdrop || poster,
+            background: backdrop,
             description: synopsis,
             genres: genres.length > 0 ? genres : ['Anime'],
             videos: videos

@@ -21,15 +21,21 @@ builder.defineCatalogHandler(async (args) => {
     } else if (args.id === 'animeav1_catalog') {
         metas = await searchCatalog(args.extra?.search || '');
     }
+    if (Array.isArray(metas)) {
+        metas.forEach(m => {
+            if (m) m.type = args.type || 'series';
+        });
+    }
     return { metas };
 });
 
 builder.defineMetaHandler(async (args) => {
     console.log(`[Meta] Request: type=${args.type}, id=${args.id}`);
-    if (!args.id.startsWith('animeav1:')) {
+    if (!args.id || !args.id.startsWith('animeav1:')) {
         return { meta: null };
     }
-    const slug = args.id.replace('animeav1:', '');
+    const cleanId = args.id.replace('animeav1:', '');
+    const slug = cleanId.split(':')[0];
     const meta = await getAnimeMeta(slug);
     if (meta) {
         meta.type = args.type || 'series';

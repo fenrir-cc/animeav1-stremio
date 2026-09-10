@@ -1,6 +1,6 @@
 export const manifest = {
     id: 'com.stremio.animeav1',
-    version: '1.4.0',
+    version: '1.5.0',
     name: 'AnimeAV1',
     description: 'Disfruta de animes en HD y Sub Español directamente desde AnimeAV1 (animeav1.com)',
     resources: [
@@ -32,6 +32,28 @@ export const manifest = {
             type: 'series',
             id: 'animeav1_catalog',
             name: 'AnimeAV1 - Catálogo',
+            extra: [
+                {
+                    name: 'search',
+                    isRequired: false
+                }
+            ]
+        },
+        {
+            type: 'anime',
+            id: 'animeav1_catalog',
+            name: 'AnimeAV1 - Catálogo Anime',
+            extra: [
+                {
+                    name: 'search',
+                    isRequired: false
+                }
+            ]
+        },
+        {
+            type: 'movie',
+            id: 'animeav1_catalog',
+            name: 'AnimeAV1 - Películas',
             extra: [
                 {
                     name: 'search',
