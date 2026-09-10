@@ -6,6 +6,11 @@ const { addonBuilder } = addonSdk;
 import { manifest } from './manifest.js';
 import { getLatestEpisodes, searchCatalog, getAnimeMeta, getEpisodeStreams } from './scraper.js';
 
+let currentDynamicHost = null;
+export function setDynamicHost(host) {
+    currentDynamicHost = host;
+}
+
 const builder = new addonBuilder(manifest);
 
 builder.defineCatalogHandler(async (args) => {
@@ -31,7 +36,7 @@ builder.defineMetaHandler(async (args) => {
 
 builder.defineStreamHandler(async (args) => {
     console.log(`[Stream] Request: type=${args.type}, id=${args.id}`);
-    const hostUrl = process.env.ADDON_HOST || 'http://localhost:7000';
+    const hostUrl = process.env.ADDON_HOST || currentDynamicHost || 'http://localhost:7000';
 
     if (args.id.startsWith('animeav1:')) {
         const parts = args.id.split(':');

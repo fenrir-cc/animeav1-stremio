@@ -1,6 +1,6 @@
 export const manifest = {
     id: 'com.stremio.animeav1',
-    version: '1.1.0',
+    version: '1.2.0',
     name: 'AnimeAV1',
     description: 'Disfruta de animes en HD y Sub Español directamente desde AnimeAV1 (animeav1.com)',
     resources: [

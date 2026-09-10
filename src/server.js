@@ -5,11 +5,22 @@ import crypto from 'crypto';
 import addonSdk from 'stremio-addon-sdk';
 const { getRouter } = addonSdk;
 
-import { addonInterface } from './addon.js';
+import { addonInterface, setDynamicHost } from './addon.js';
 import { manifest } from './manifest.js';
 
 const app = express();
+app.set('trust proxy', true);
 app.use(cors());
+
+// Middleware to dynamically capture public host URL for cloud deployments (Render, Railway, VPS)
+app.use((req, res, next) => {
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    if (host) {
+        setDynamicHost(`${proto}://${host}`);
+    }
+    next();
+});
 
 const PORT = process.env.PORT || 7000;
 
